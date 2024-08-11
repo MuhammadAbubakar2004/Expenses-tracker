@@ -9,9 +9,12 @@ import ExpenseForm from "../components/ManageExpense/ExpenseForm";
 import { deleteExpense, storeExpense, updateExpense } from "../util/http";
 import { setUpTests } from "react-native-reanimated";
 import LoadingOverlay from "../components/UI/LoadingOverlay";
+import ErrorOverlay from "../components/UI/ErrorOverlay";
 
 function ManageExpense({route, navigation}){
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState();
+
     const expensesCtx = useContext(ExpensesContext);
 
     const editExpenseId = route.params?.expenseId;
@@ -30,15 +33,23 @@ function ManageExpense({route, navigation}){
 
     async function deleteHandler(){
         setIsSubmitting(true);
-        await deleteExpense(editExpenseId);
-        expensesCtx.deleteExpense(editExpenseId);
-        navigation.goBack();
+        try {
+            await deleteExpense(editExpenseId);
+            expensesCtx.deleteExpense(editExpenseId);
+            navigation.goBack();
+
+        } catch (error){
+            setError('Could not delete expense - plz try again later!');
+            setIsSubmitting(false);
+        }
     }
+
     function cancelHandler(){
         navigation.goBack();
     }
     async function confirmHandler(expenseData){
         setIsSubmitting(true);
+        try{
         if(isEditing){
             expensesCtx.updateExpense(editExpenseId ,expenseData);
             await updateExpense(editExpenseId, expenseData);
@@ -47,6 +58,18 @@ function ManageExpense({route, navigation}){
             expensesCtx.addExpense({...expenseData , id: id});
         }
         navigation.goBack();
+    }catch(error){
+        setError('Could not save expense - Plz try again later');
+        setIsSubmitting(false);
+    }
+    }
+
+function errorHandler() {
+    setError(null);
+}
+
+    if(error && !isSubmitting) {
+        return <ErrorOverlay message={error} onConfirm={errorHandler}/>
     }
 
     if(isSubmitting) {
